@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calisthenics Workout Planner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Basic scrollbar styling for better UX */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #4a5568; /* Tailwind gray-700 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #60a5fa; /* Tailwind blue-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6; /* Tailwind blue-500 */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white p-4 sm:p-8 flex flex-col items-center justify-center">
+
+    <!-- Header and Navigation Section -->
+    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-8">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-teal-400">
+            Calisthenics Workout Planner
+        </h1>
+        <div class="flex flex-col sm:flex-row items-center justify-between mb-6 space-y-4 sm:space-y-0">
+            <button id="prevDayBtn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 w-full sm:w-auto">
+                &larr; Previous Day
+            </button>
+            <h2 id="currentDateDisplay" class="text-xl sm:text-2xl font-semibold text-center text-gray-200">
+                Loading Date...
+            </h2>
+            <button id="nextDayBtn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 w-full sm:w-auto">
+                Next Day &rarr;
+            </button>
+        </div>
+        <!-- Daily Motivation Button -->
+        <div class="flex justify-center mt-6">
+            <button id="motivationBtn" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50">
+                Daily Motivation ✨
+            </button>
+        </div>
+    </div>
+
+    <!-- Workout Details Section -->
+    <div id="workoutDetails" class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8">
+        <!-- Content will be dynamically loaded here by JavaScript -->
+        <p class="text-xl text-center text-gray-400 py-8">Loading workout plan...</p>
+    </div>
+
+    <!-- Modal for LLM Responses -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-w-lg w-full relative">
+            <button id="closeModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-200 text-2xl font-bold focus:outline-none z-10">
+                &times;
+            </button>
+            <h3 id="modalTitle" class="text-2xl font-bold text-teal-400 mb-4 text-center">
+                Gemini Says...
+            </h3>
+            <div class="max-h-96 overflow-y-auto">
+                <p id="modalContent" class="text-gray-300 text-lg leading-relaxed whitespace-pre-wrap break-words">
+                    Loading...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data for the workout plan
+        const workoutPlan = {
+            "2025-07-09": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-07-10": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds (per round)" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps (per round)" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total (per round)" },
+                ],
+            },
+            "2025-07-11": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-07-12": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-07-13": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-07-14": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-07-15": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-07-16": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-07-17": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds (per round)" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps (per round)" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total (per round)" },
+                ],
+            },
+            "2025-07-18": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-07-19": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-07-20": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-07-21": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-07-22": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-07-23": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-07-24": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds (per round)" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps (per round)" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total (per round)" },
+                ],
+            },
+            "2025-07-25": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-07-26": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-07-27": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-07-28": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-07-29": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-07-30": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-07-31": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds (per round)" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps (per round)" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total (per round)" },
+                ],
+            },
+            "2025-08-01": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-08-02": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-08-03": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-08-04": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-05": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-06": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-08-07": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total" },
+                ],
+            },
+            "2025-08-08": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-08-09": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-08-10": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-08-11": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-12": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-13": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-08-14": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total" },
+                ],
+            },
+            "2025-08-15": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-08-16": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-08-17": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-08-18": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-19": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-20": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-08-21": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total" },
+                ],
+            },
+            "2025-08-22": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-08-23": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-08-24": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-08-25": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-26": { dayType: "Rest Day", phase: "Phase 1", focus: "Rest", exercises: [] },
+            "2025-08-27": {
+                dayType: "Workout Day 1",
+                phase: "Phase 1",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups", sets: 4, reps: "8-12 reps" },
+                    { name: "Inverted Rows (on pull-up bar/table)", sets: 3, reps: "10-15 reps" },
+                    { name: "Australian Pull-ups (wide grip)", sets: 3, reps: "10-15 reps" },
+                    { name: "Bicep Curls (using resistance band or towel pull)", sets: 3, reps: "12-15 reps" },
+                    { name: "High Pulls (explosive pull-ups)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "15-20 seconds" },
+                ],
+            },
+            "2025-08-28": {
+                dayType: "Workout Day 2",
+                phase: "Phase 1",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Push-ups (on handles)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (between chairs/parallel bars or on handles if stable)", sets: 3, reps: "8-12 reps" },
+                    { name: "Pike Push-ups (for shoulder strength)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band)", sets: 3, reps: "12-15 reps" },
+                    { name: "Plank", sets: 3, reps: "45-60 seconds" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total" },
+                ],
+            },
+            "2025-08-29": {
+                dayType: "Workout Day 3",
+                phase: "Phase 1",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Squats (bodyweight)", sets: 3, reps: "20-25 reps" },
+                    { name: "Lunges (alternating)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Glute Bridges", sets: 3, reps: "15-20 reps" },
+                    { name: "Calf Raises (standing)", sets: 3, reps: "20-30 reps" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-08-30": {
+                dayType: "Workout Day 4",
+                phase: "Phase 1",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (on handles)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (bodyweight)", sets: 3, reps: "AMRAP" },
+                    { name: "Decline Push-ups (feet elevated for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Bodyweight Rows (various grips)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-08-31": {
+                dayType: "Workout Day 5",
+                phase: "Phase 1",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Explosive Pull-ups (higher than Day 1)", sets: 4, reps: "5-8 reps" },
+                    { name: "Straight Bar Dips (negative/assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "20-30 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "30-45 seconds" },
+                    { name: "Shoulder Taps in Plank/Pike", sets: 3, reps: "10-15 per side" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "30-45 seconds" },
+                    { name: "Arch Body Hold", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-09-01": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-02": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-03": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-09-04": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-09-05": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-09-06": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-09-07": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-09-08": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-09": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-10": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-09-11": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-09-12": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-09-13": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-09-14": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-09-15": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-16": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-17": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-09-18": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-09-19": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-09-20": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-09-21": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-09-22": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-23": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-24": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-09-25": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-09-26": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-09-27": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-09-28": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-09-29": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-09-30": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-01": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-10-02": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-10-03": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-10-04": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-10-05": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-10-06": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-07": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-08": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-10-09": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-10-10": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-10-11": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-10-12": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-10-13": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-14": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-15": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-10-16": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Hanging Leg Raises (or Knee Raises)", sets: 3, reps: "12-15 reps" },
+                    { name: "Side Planks", sets: 3, reps: "30-45 seconds per side" },
+                ],
+            },
+            "2025-10-17": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-10-18": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-10-19": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-10-20": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-21": { dayType: "Rest Day", phase: "Phase 2", focus: "Rest", exercises: [] },
+            "2025-10-22": {
+                dayType: "Workout Day 1",
+                phase: "Phase 2",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (L-sit, Narrow, or Weighted)", sets: 4, reps: "5-8 reps" },
+                    { name: "Inverted Rows (feet elevated or one-arm assisted)", sets: 3, reps: "8-12 reps" },
+                    { name: "Typewriter Pull-ups (or archer pull-ups assisted)", sets: 3, reps: "4-6 reps (per side)" },
+                    { name: "Bicep Curls (resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Explosive High Pulls (aiming for hips to bar)", sets: 3, reps: "5-8 reps" },
+                    { name: "False Grip Holds (on pull-up bar)", sets: 3, reps: "20-30 seconds" },
+                ],
+            },
+            "2025-10-23": {
+                dayType: "Workout Day 2",
+                phase: "Phase 2",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Decline Push-ups (feet elevated higher)", sets: 3, reps: "8-12 reps" },
+                    { name: "Dips (weighted or slower tempo)", sets: 3, reps: "5-8 reps" },
+                    { name: "Pike Push-ups (feet elevated higher for more challenge)", sets: 3, reps: "8-12 reps" },
+                    { name: "Triceps Extensions (bodyweight or resistance band with more tension)", sets: 3, reps: "10-12 reps" },
+                    { name: "Hollow Body Hold", sets: 3, reps: "45-60 seconds" },
+                    { name: "Leg Raises", sets: 3, reps: "15-20 reps" },
+                    { name: "Russian Twists", sets: 3, reps: "20-30 reps total" },
+                ],
+            },
+            "2025-10-24": {
+                dayType: "Workout Day 3",
+                phase: "Phase 2",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Bulgarian Split Squats (or Pistol Squat Negatives)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Lunges (weighted or jump lunges)", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Single Leg Glute Bridges", sets: 3, reps: "12-15 reps per leg" },
+                    { name: "Calf Raises (single leg)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (against wall)", sets: 3, reps: "30-45 seconds" },
+                ],
+            },
+            "2025-10-25": {
+                dayType: "Workout Day 4",
+                phase: "Phase 2",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Pull-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Push-ups (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Squats (challenging variation)", sets: 3, reps: "AMRAP" },
+                    { name: "Archer Push-ups (or one-arm push-up negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "Bodyweight Rows (one-arm assisted or harder angle)", sets: 3, reps: "8-12 reps" },
+                ],
+            },
+            "2025-10-26": {
+                dayType: "Workout Day 5",
+                phase: "Phase 2",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Muscle-Up Negatives", sets: 4, reps: "3-5 reps" },
+                    { name: "Low Bar Muscle-Up Progression (if available)", sets: 3-5, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or slower tempo)", sets: 4, reps: "5-8 reps" },
+                    { name: "False Grip Practice", sets: 5, reps: "30-45 seconds" },
+                    { name: "Wall Handstand Holds", sets: 3, reps: "45-60 seconds" },
+                    { name: "Handstand Shoulder Taps (against wall)", sets: 3, reps: "8-10 per side" },
+                    { name: "L-Sit Holds (on floor or handles)", sets: 3, reps: "15-30 seconds" },
+                    { name: "Dragon Flags (assisted)", sets: 3, reps: "5-8 reps" },
+                ],
+            },
+            "2025-10-27": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-10-28": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-10-29": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-10-30": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-10-31": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-11-01": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-11-02": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-11-03": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-04": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-05": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-11-06": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-11-07": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-11-08": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-11-09": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-11-10": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-11": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-12": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-11-13": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-11-14": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-11-15": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-11-16": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-11-17": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-18": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-19": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-11-20": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-11-21": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-11-22": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-11-23": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-11-24": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-25": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-11-26": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-11-27": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-11-28": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-11-29": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-11-30": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-12-01": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-02": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-03": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-12-04": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-12-05": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-12-06": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-12-07": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-12-08": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-09": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-10": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-12-11": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-12-12": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-12-13": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-12-14": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-12-15": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-16": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-17": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-12-18": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-12-19": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-12-20": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-12-21": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-12-22": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-23": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-24": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+            "2025-12-25": {
+                dayType: "Workout Day 2",
+                phase: "Phase 3",
+                focus: "Push Focus + Core",
+                exercises: [
+                    { name: "Pseudo Planche Push-ups (or Planche Lean Push-ups)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Dips (Weighted or Ring Dips if available)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Handstand Push-up Progression (Pike HSPU on parallettes/elevated feet)", sets: 3-4, reps: "5-8 reps" },
+                    { name: "Triceps Extensions (hardest variation)", sets: 3, reps: "10-12 reps" },
+                    { name: "V-ups", sets: 3, reps: "10-15 reps" },
+                    { name: "Dragon Flags", sets: 3, reps: "5-8 reps" },
+                    { name: "Windshield Wipers (hanging)", sets: 3, reps: "10-15 reps total" },
+                ],
+            },
+            "2025-12-26": {
+                dayType: "Workout Day 3",
+                phase: "Phase 3",
+                focus: "Legs + Active Recovery/Light Skill Work",
+                exercises: [
+                    { name: "Pistol Squats (assisted or full)", sets: 3-4, reps: "5-8 reps per leg" },
+                    { name: "Nordic Hamstring Curls (assisted)", sets: 3, reps: "5-8 reps" },
+                    { name: "Sissy Squats (assisted)", sets: 3, reps: "10-15 reps" },
+                    { name: "Calf Raises (weighted or single leg with weight)", sets: 3, reps: "15-20 reps per leg" },
+                    { name: "Handstand holds (freestanding attempts or against wall)", sets: 3, reps: "45-60 seconds" },
+                ],
+            },
+            "2025-12-27": {
+                dayType: "Workout Day 4",
+                phase: "Phase 3",
+                focus: "Full Body Strength",
+                exercises: [
+                    { name: "Muscle-Up Attempts", sets: 5-10, reps: "Attempts (rest 2-3 min between)" },
+                    { name: "Archer Push-ups (or One-Arm Push-up Negatives)", sets: 3, reps: "3-5 reps per side" },
+                    { name: "L-Sit Pull-ups (or Weighted Pull-ups)", sets: 3, reps: "6-10 reps" },
+                    { name: "Bulgarian Split Squats (weighted)", sets: 3, reps: "8-12 reps per leg" },
+                    { name: "Straight Bar Dips (weighted)", sets: 3, reps: "6-10 reps" },
+                ],
+            },
+            "2025-12-28": {
+                dayType: "Workout Day 5",
+                phase: "Phase 3",
+                focus: "Skill Work / Weak Point Focus",
+                exercises: [
+                    { name: "Full Muscle-Up Attempts", sets: 5-10, reps: "Attempts" },
+                    { name: "Specific Transition Drills (e.g., using band for assistance)", sets: 3-5, reps: "5-8 reps" },
+                    { name: "False Grip Pull-overs (if able)", sets: 3, reps: "3-5 reps" },
+                    { name: "Straight Bar Dips (weighted or higher reps)", sets: 3, reps: "8-12 reps" },
+                    { name: "Freestanding Handstand Attempts", sets: "Multiple", reps: "Short attempts" },
+                    { name: "Wall Handstand Push-up Negatives", sets: 3, reps: "3-5 reps" },
+                    { name: "Weighted Planks", sets: 3, reps: "30-45 seconds" },
+                    { name: "Ab Rollouts (with wheel or resistance band)", sets: 3, reps: "10-15 reps" },
+                ],
+            },
+            "2025-12-29": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-30": { dayType: "Rest Day", phase: "Phase 3", focus: "Rest", exercises: [] },
+            "2025-12-31": {
+                dayType: "Workout Day 1",
+                phase: "Phase 3",
+                focus: "Pull Focus + Muscle-Up Drills",
+                exercises: [
+                    { name: "Pull-ups (Advanced Variation, e.g., Archer, One-Arm Negative)", sets: 3-4, reps: "4-6 reps" },
+                    { name: "Front Lever Progression (Tuck/Advanced Tuck Holds)", sets: 3, reps: "10-20 seconds" },
+                    { name: "Explosive High Pulls (aiming for belly button to bar)", sets: 4, reps: "3-5 reps" },
+                    { name: "False Grip Pull-ups", sets: 3, reps: "5-8 reps" },
+                    { name: "Muscle-Up Negatives", sets: 3-5, reps: "3-5 reps" },
+                ],
+            },
+        };
+
+        // DOM Elements
+        const currentDateDisplay = document.getElementById('currentDateDisplay');
+        const prevDayBtn = document.getElementById('prevDayBtn');
+        const nextDayBtn = document.getElementById('nextDayBtn');
+        const motivationBtn = document.getElementById('motivationBtn');
+        const workoutDetailsContainer = document.getElementById('workoutDetails');
+        const modal = document.getElementById('modal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContentElem = document.getElementById('modalContent');
+
+        // State variables (managed directly with JS variables)
+        let currentDate = new Date();
+        let loadingExplanation = false;
+        let loadingMotivation = false;
+
+        // Helper to format date as YYYY-MM-DD
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // Function to render the workout plan for the current date
+        const renderWorkoutPlan = () => {
+            const formattedDate = currentDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+            currentDateDisplay.textContent = formattedDate;
+
+            const workoutForToday = workoutPlan[formatDate(currentDate)];
+            let htmlContent = '';
+
+            if (workoutForToday) {
+                htmlContent += `
+                    <h3 class="text-2xl sm:text-3xl font-bold text-center text-purple-400 mb-4">
+                        ${workoutForToday.dayType}
+                    </h3>
+                    <p class="text-lg sm:text-xl text-center text-gray-300 mb-6">
+                        <span class="font-semibold">${workoutForToday.phase}:</span> ${workoutForToday.focus}
+                    </p>
+                `;
+
+                if (workoutForToday.exercises.length > 0) {
+                    htmlContent += '<div class="space-y-4">';
+                    workoutForToday.exercises.forEach((exercise, index) => {
+                        htmlContent += `
+                            <div class="bg-gray-700 p-4 rounded-xl shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                <span class="text-lg font-medium text-gray-100 mb-2 sm:mb-0">
+                                    ${exercise.name}
+                                </span>
+                                <span class="text-md text-gray-300">
+                                    ${exercise.sets} sets of ${exercise.reps}
+                                </span>
+                                <button
+                                    data-exercise-name="${exercise.name}"
+                                    class="exercise-explain-btn ml-0 sm:ml-4 mt-2 sm:mt-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50"
+                                >
+                                    Explain ✨
+                                </button>
+                            </div>
+                        `;
+                    });
+                    htmlContent += '</div>';
+                } else {
+                    htmlContent += `
+                        <p class="text-xl text-center text-gray-400 py-8">
+                            Enjoy your rest day!
+                        </p>
+                    `;
+                }
+            } else {
+                htmlContent += `
+                    <p class="text-xl text-center text-gray-400 py-8">
+                        No workout scheduled for this date.
+                    </p>
+                `;
+            }
+            workoutDetailsContainer.innerHTML = htmlContent;
+
+            // Add event listeners to newly rendered explanation buttons
+            document.querySelectorAll('.exercise-explain-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const exerciseName = event.target.dataset.exerciseName;
+                    getExerciseExplanation(exerciseName);
+                });
+            });
+        };
+
+        // Function to show modal
+        const showModalFunc = (title, content) => {
+            modalTitle.textContent = title;
+            modalContentElem.textContent = content;
+            modal.classList.remove('hidden');
+        };
+
+        // Function to hide modal
+        const hideModalFunc = () => {
+            modal.classList.add('hidden');
+        };
+
+        // Function to fetch exercise explanation from LLM
+        const getExerciseExplanation = async (exerciseName) => {
+            if (loadingExplanation) return;
+            loadingExplanation = true;
+            showModalFunc('Loading Explanation...', '...'); // Show modal immediately with loading indicator
+            document.querySelectorAll('.exercise-explain-btn').forEach(btn => btn.disabled = true); // Disable all explanation buttons
+
+            try {
+                const prompt = `Provide a detailed explanation of the calisthenics exercise: ${exerciseName}, including its benefits and proper form. Keep it concise and focused on calisthenics.`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const apiKey = ""; // Leave as-is, Canvas will provide in runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    modalTitle.textContent = 'Exercise Explanation';
+                    modalContentElem.textContent = text;
+                } else {
+                    modalTitle.textContent = 'Error';
+                    modalContentElem.textContent = 'Failed to get explanation. Please try again.';
+                }
+            } catch (error) {
+                console.error('Error fetching exercise explanation:', error);
+                modalTitle.textContent = 'Error';
+                modalContentElem.textContent = 'Error fetching explanation. Please try again later.';
+            } finally {
+                loadingExplanation = false;
+                document.querySelectorAll('.exercise-explain-btn').forEach(btn => btn.disabled = false); // Re-enable buttons
+            }
+        };
+
+        // Function to fetch motivational message from LLM
+        const getMotivationalMessage = async () => {
+            if (loadingMotivation) return;
+            loadingMotivation = true;
+            showModalFunc('Generating Motivation...', '...'); // Show modal immediately with loading indicator
+            motivationBtn.disabled = true; // Disable motivation button
+
+            try {
+                const prompt = "Generate a short, inspiring motivational message for a calisthenics workout. Keep it concise and encouraging.";
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const apiKey = ""; // Leave as-is, Canvas will provide in runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    modalTitle.textContent = 'Daily Motivation';
+                    modalContentElem.textContent = text;
+                } else {
+                    modalTitle.textContent = 'Error';
+                    modalContentElem.textContent = 'Failed to get motivation. Please try again.';
+                }
+            } catch (error) {
+                console.error('Error fetching motivational message:', error);
+                modalTitle.textContent = 'Error';
+                modalContentElem.textContent = 'Error fetching motivation. Please try again later.';
+            } finally {
+                loadingMotivation = false;
+                motivationBtn.disabled = false; // Re-enable motivation button
+            }
+        };
+
+        // Event Listeners
+        prevDayBtn.addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() - 1);
+            renderWorkoutPlan();
+        });
+
+        nextDayBtn.addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() + 1);
+            renderWorkoutPlan();
+        });
+
+        motivationBtn.addEventListener('click', getMotivationalMessage);
+        closeModalBtn.addEventListener('click', hideModalFunc);
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', renderWorkoutPlan);
+    </script>
+</body>
+</html>
